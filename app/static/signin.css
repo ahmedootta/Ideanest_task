@@ -1,6 +1,5 @@
 body {
-    background-image: url(ideanest_agency_logo.jpeg);
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
     margin: 0;
     padding: 0;
     background-color: #f4f4f4;
@@ -8,16 +7,32 @@ body {
 
 .container {
     max-width: 400px;
-    margin: 100px auto;
+    margin: 50px auto;
     padding: 50px;
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.container:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 header {
     text-align: center;
     margin-bottom: 20px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 24px;
+    color: #333;
+}
+
+header p {
+    font-size: 14px;
+    color: #777;
 }
 
 .form-group {
@@ -27,13 +42,24 @@ header {
 .form-group label {
     display: block;
     margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
     width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
+    font-size: 14px;
+    transition: border 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #007bff;
+    outline: none;
 }
 
 button {
@@ -43,9 +69,54 @@ button {
     color: white;
     border: none;
     border-radius: 4px;
+    font-size: 16px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
 button:hover {
     background-color: #0056b3;
+}
+
+.flashed-messages {
+    list-style-type: none; /* Remove default bullet points */
+    padding: 0;
+    margin-bottom: 15px;
+}
+
+.flashed-messages li {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    color: white; /* Default text color */
+}
+
+.success {
+    background-color: #28a745; /* Green for success messages */
+}
+
+.error {
+    background-color: #dc3545; /* Red for error messages */
+}
+
+.warning {
+    background-color: #ffc107; /* Yellow for warning messages */
+}
+
+.info {
+    background-color: #17a2b8; /* Blue for info messages */
+}
+
+.redirect-text {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.redirect-text a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.redirect-text a:hover {
+    text-decoration: underline;
 }

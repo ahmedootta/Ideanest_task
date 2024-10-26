@@ -2,8 +2,11 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    build:
+      context: ./app
     ports:
       - "8080:8080"
     env_file:
       - .env
+    volumes:
+      - ./app:/app  # This mounts the app directory in your host to the container
