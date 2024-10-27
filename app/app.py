@@ -4,6 +4,7 @@ from flask_jwt_extended import JWTManager, create_access_token, create_refresh_t
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from dotenv import load_dotenv
 from werkzeug.security import check_password_hash, generate_password_hash
+from bson import ObjectId
 import json
 import datetime
 import os
@@ -25,7 +26,7 @@ client = MongoClient(MONGO_URI, ssl=True, tls=True)
 
 db = client.Ideanest
 members_collection = db.members
-organization_collection = db.organizations
+organizations_collection = db.organizations
 
 @app.route('/') 
 def index():
@@ -47,7 +48,7 @@ def signup():
             if password == r_password:
                 exist_user = members_collection.find_one({'email': email})
                 if exist_user:
-                    return "User already exists!"
+                    return jsonify({"Error": "User already exists!"})
 
                 else:    
                     new_member = {
@@ -64,7 +65,7 @@ def signup():
                         return("An error occurred while registering: {}".format(str(e)), 'error')
 
             else:
-                return("Password-confirmation doesn't match password!", 'error')
+                return jsonify({"Error": "Password-confirmation doesn't match password!"})
         
 # -----------------------------------------------------------------------------------------------------------
         # TEST THROUGH HTML PAGES "frontend"
@@ -106,7 +107,6 @@ def signup():
 
 @app.route('/signin', methods=['GET', 'POST'])  
 def signin():
-
     if request.method == "POST":
         # Test in postman through json-format
         if request.is_json:
@@ -157,6 +157,168 @@ def refresh_token():
         "refresh_token": new_refresh_token
     }), 200
           
+#-----------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
+
+@app.route('/organization', methods=['POST'])
+@jwt_required()  # Ensure only a refresh token can access this endpoint
+def create_organization():
+   ...
+   if request.method == "POST":
+        # Test in postman through json-format
+        if request.is_json:
+            data = request.get_json()
+            name = data.get('name')
+            description = data.get('description')
+            # Optional field, set to an empty list if not provided
+            organization_members = data.get('organization_members', [])
+
+            # Create new organization document
+            new_organization = {
+                "name": name,
+                "description": description,
+                "organization_members": organization_members  # Can be empty
+            }
+            
+            try:
+                organization_id = organizations_collection.insert_one(new_organization).inserted_id
+                return jsonify({
+                        "organization_id": str(organization_id),
+                        "message": "Organization created successfully!"
+                    }), 201
+            except Exception as e:
+                return (f"Error: {str(e)}")
+
+
+@app.route('/organization/<id>', methods=['GET'])
+@jwt_required()
+def get_organization(id):
+    try:    
+        target_organization = organizations_collection.find_one({'_id': ObjectId(id)})
+        organization_members_Ids = target_organization['organization_members']
+        organization_members_dics = []
+        for id in organization_members_Ids:
+            user = members_collection.find_one({"_id": ObjectId(id)})
+            user_dic = {
+                "name": user['name'],
+                "email": user['email'],
+                "access_level": user['access_level'],
+            }
+            organization_members_dics.append(user_dic)
+            
+        return jsonify({
+            "Target_organization": {
+                "id": str(target_organization['_id']),
+                "name": target_organization.get('name'),
+                "description": target_organization.get('description'),
+                "organization_members": organization_members_dics
+            },
+        })
+    except Exception as e:
+        return (f"Error: {str(e)}")    
+    
+
+@app.route('/organization', methods=['GET'])
+@jwt_required()
+def get_all_organizations():
+    try:    
+        all_organizations = organizations_collection.find()
+        final_result = []
+        for organization in all_organizations:
+            ...
+            organization_members_Ids = organization['organization_members']
+            organization_members_dics = []
+            for id in organization_members_Ids:
+                user = members_collection.find_one({"_id": ObjectId(id)})
+                user_dic = {
+                    "name": user['name'],
+                    "email": user['email'],
+                    "access_level": user['access_level'],
+                }
+                organization_members_dics.append(user_dic)
+
+            organize_dic = {
+                "id": str(organization['_id']),
+                "name": organization.get('name'),
+                "description": organization.get('description'),
+                "organization_members": organization_members_dics
+            }
+
+            final_result.append(organize_dic)   
+
+
+        return jsonify({
+            "All_organizationa": final_result,
+        })
+    except Exception as e:
+        return (f"Error: {str(e)}")    
+    
+
+
+@app.route('/organization/<id>', methods=['DELETE'])
+@jwt_required()
+def delete_organization(id): # delete organization if user-role: 'Admin' only.....besides Access token
+    current_user_id = get_jwt_identity()
+    logged_user = members_collection.find_one({"_id": ObjectId(current_user_id)})
+    if logged_user['access_level'] == 'Admin':
+        try:
+            organizations_collection.delete_one({"_id": ObjectId(id)})
+            return jsonify({
+                    "message": "Organization deleted!"
+                }), 201
+        except Exception as e:
+            return (f"Error: {str(e)}")
+    else:
+        return jsonify({
+                "error": "Unauthourized to delete organization!"
+            }), 201            
+
+
+@app.route('/organization/<id>', methods=['PUT'])
+@jwt_required()
+def update_organization(id): # delete organization if user-role: 'Admin' only.....besides Access token
+
+    current_user_id = get_jwt_identity()
+    logged_user = members_collection.find_one({"_id": ObjectId(current_user_id)})
+
+    if logged_user['access_level'] == 'Admin':
+        if request.is_json:
+            data = request.get_json()
+            updated_data = {
+                'name': data.get('name'),
+                'description': data.get('description'),
+            }
+        try:
+            result = organizations_collection.update_one(
+                {'_id': ObjectId(id)}, 
+                {'$set': updated_data}  
+            )
+            updated_organization = organizations_collection.find_one({'_id': ObjectId(id)})
+            return jsonify({
+                "updated_organization": {
+                    "id": str(updated_organization['_id']),
+                    "name": updated_organization.get('name'),
+                    "description": updated_organization.get('description')
+                },
+                "message": "Organization updated successfully!"
+            }), 201
+        except Exception as e:
+            return (f"Error: {str(e)}")
+    else:
+        return jsonify({
+                "error": "Unauthourized to update organization!"
+            }), 201            
+
+@app.route("/organization/<id>/invite", methods=['POST'])
+@jwt_required()
+def invite(id):
+    if request.is_json:
+        data = request.get_json() 
+
+    invited_user = members_collection.find_one({"email": data.get('user_email')})  
+    target_organization = organizations_collection.find_one({'_id': ObjectId(id)})  
+    if invited_user:
+        return f"{invited_user['name']} Have been invited to {target_organization['name']}"
 
 
 
